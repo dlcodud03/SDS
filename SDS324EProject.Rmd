@@ -1,0 +1,96 @@
+---
+title: "SDS 324E Project"
+output: html_notebook
+---
+
+```{r}
+library(MASS)
+library(tidyverse)
+library("pscl")
+library(AER)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(ggfortify)
+
+Our dataset originates from the US National Medical Expenditure Surevey (NMES) conducted in 1987 and 1988.The three hypothesis explores the dataset to find relationships between income with the three pairs of predictor variables:health status levels and number of physician office visits,  The individuals within this dataset are all ages 66 and over all of whom covered by medicare. All of the predictor variables for the three hypotheses measure the outcome variable of income. Through this project we 
+
+data("NMES1988")
+dataset=NMES1988
+
+
+#variables: The predictor variable, 'school' indicates the number of years of education and 'age' indicates age in years divided by 10. The outcome variable of income indicates the family income in USD 10,000.
+
+```
+
+```{r}
+# visuals (but still unsure which variables to use)
+boxplot(dataset$income,dataset$age,dataset$school)
+
+##According to the boxplots, we can see that 'income' has the most amount of outliers, leading to the conclusion that this variable has the highest variance. Thus, we can not assume equal variance for each variable. 
+
+plot(income~age+school, data=dataset)
+##When each variable is compared to income, we can see that none of the variables seem to have a linear relationship. This means that we cannot assume linearity and that these variables must be transformed in order to meet these assumptions.
+
+#correlation
+nmes=select(dataset,income, age,school)
+nmes_cor= cor(nmes)
+library(pheatmap)
+     pheatmap(nmes_cor,
+              treeheight_col = 0,
+              treeheight_row = 0,
+              display_numbers = TRUE,
+              breaks = seq(-1, 1, length = 101))
+##We can see from the heatmap that none of the variables have a strong correlation, with the highest correlation (between income and school) at only a 0.26, this is another piece of evidence that these base relationships between the variables are not linear. 
+    ```
+    
+```{r}
+# lm model 
+agelm=lm(income~age,data= dataset )
+schoollm=lm(income~school, data= dataset )
+summary(agelm)
+summary(schoollm)
+##Using R-squared as a criteria, school seems to be the better single predictor of income, accounting for roughly 6.718% of its variability.
+
+## Increasing age by one unit, holding all other variables fixed, decreases income by 0.33767 units. Increasing the number of years of education (school) by one unit, holding all other variables fixed, increases income by 0.20276 units.
+
+###null hypothesis: age and school have no significance in predicting income
+###alt hypothesis: age and school have significance in predicting income
+
+nmeslm=lm(income~age+school, data= dataset)
+summary(nmeslm)
+##We see a decent improvement with multiple linear model as we now account for roughly 6.851% of its variability. 
+```
+
+    
+```{r}
+#autoplot
+library(ggplot2)
+autoplot(nmeslm)
+##According to our lm, none of the variables are good predictors of income. However, when checking autoplot, we see that all assumptions (equal variance, linearity, error assumption) are violated and therefore this is not a good model to follow. In order to come up with a better model, each of these variables must be transformed using log or some other method to see if they are good predictors of income.
+
+dataset=dataset[dataset$income>0,]
+loglm=lm(log(income)~age+school, data= dataset)
+summary(loglm)
+#anova(smokelm,test="F")
+
+#autoplot
+autoplot(loglm)
+
+
+
+library(splines)
+splinelm=lm(income~ns(age,df=3)+school, data= dataset)
+summary(splinelm)
+```
+
+
+```{r}
+library(simpleboot)
+#logsmokelm=lm(log(ttr+0.1)~yearsSmoking+priorAttempts+longestNoSmoke, data= pharmacoSmoking)
+boot <- lm.boot(nmeslm, R = 1000)
+print(boot)
+```
+
+
+
